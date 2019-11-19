@@ -75,6 +75,7 @@ func WriteBasicInfoViaZK() (dt string, ver int32) {
 	if err != nil {
 		log.Printf("Error in getting version, %s", err)
 	}
+	log.Printf("Setting version from %d to %d", ver)
 	ver++
 
 	CreateIfNotExistAndUpdate("device_type", []byte(dt), true, ver)
