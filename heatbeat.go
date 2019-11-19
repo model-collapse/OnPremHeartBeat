@@ -19,7 +19,7 @@ var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
 func DevicePropertyPath(name string) string {
-	return fmt.Sprintf("%s/%s/%s", *rootName, *deviceName, name)
+	return fmt.Sprintf("/%s/%s/%s", *rootName, *deviceName, name)
 }
 
 func CreateIfNotExistAndUpdate(name string, val []byte) {
