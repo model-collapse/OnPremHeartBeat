@@ -19,8 +19,8 @@ var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
 func RegisterDevice() {
-	CreateIfNotExistAndUpdateAbs("/"+*rootName, []byte("nothing"), false)
-	CreateIfNotExistAndUpdateAbs(fmt.Sprintf("/%s/%s", *rootName, *deviceName), []byte("nothing"), false)
+	CreateIfNotExistAndUpdateAbs("/"+*rootName, []byte("nothing"), false, 0)
+	CreateIfNotExistAndUpdateAbs(fmt.Sprintf("/%s/%s", *rootName, *deviceName), []byte("nothing"), false, 0)
 }
 
 func DevicePropertyPath(name string) string {
@@ -33,7 +33,16 @@ func ZKSetAndLog(path string, val []byte, ver int32) {
 	}
 }
 
-func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool) {
+func GetVersion() (int32, error) {
+	_, stat, err := ZKConn.Exists(fmt.Sprintf("/%s/%$/cpu", *rootName, *deviceName))
+	if err != nil {
+		return 0, err
+	}
+
+	return stat.Version, nil
+}
+
+func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool, ver int32) {
 	dtp := DevicePropertyPath(name)
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
 		log.Printf("Error checking node %s, %v", dtp, err)
@@ -42,11 +51,11 @@ func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool) {
 			log.Printf("Fail to create node %s, %v", dtp, err)
 		}
 	} else if needUpdate {
-		ZKSetAndLog(dtp, val, 0)
+		ZKSetAndLog(dtp, val, ver)
 	}
 }
 
-func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool) {
+func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool, ver int32) {
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
 		log.Printf("Error checking node %s, %v", dtp, err)
 	} else if !exists {
@@ -54,51 +63,57 @@ func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool) {
 			log.Printf("Fail to create node %s, %v", dtp, err)
 		}
 	} else if needUpdate {
-		ZKSetAndLog(dtp, val, 0)
+		ZKSetAndLog(dtp, val, ver)
 	}
 }
 
-func WriteBasicInfoViaZK() string {
-	dt := GetHardwareType()
+func WriteBasicInfoViaZK() (dt string, ver int32) {
+	dt = GetHardwareType()
 	rol := GetDeviceRole()
 
-	CreateIfNotExistAndUpdate("device_type", []byte(dt), true)
-	CreateIfNotExistAndUpdate("device_role", []byte(rol), true)
+	ver, err := GetVersion()
+	if err != nil {
+		log.Printf("Error in getting version, %s", err)
+	}
+	ver++
+
+	CreateIfNotExistAndUpdate("device_type", []byte(dt), true, ver)
+	CreateIfNotExistAndUpdate("device_role", []byte(rol), true, ver)
 
 	cpuc := fmt.Sprintf("%d", GetCPUCores())
 	mem, _ := GetMemory()
 	cpuu, _ := GetCPULoad()
 
-	CreateIfNotExistAndUpdate("cpu_cores", []byte(cpuc), true)
-	CreateIfNotExistAndUpdate("cpu", []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), true)
-	CreateIfNotExistAndUpdate("mem_cap", []byte(fmt.Sprintf("%d", int(mem.Total))), true)
-	CreateIfNotExistAndUpdate("mem", []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), true)
+	CreateIfNotExistAndUpdate("cpu_cores", []byte(cpuc), true, ver)
+	CreateIfNotExistAndUpdate("cpu", []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), true, ver)
+	CreateIfNotExistAndUpdate("mem_cap", []byte(fmt.Sprintf("%d", int(mem.Total))), true, ver)
+	CreateIfNotExistAndUpdate("mem", []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), true, ver)
 
 	if dt == "jetson_nano" {
 		gpuc := fmt.Sprintf("%d", GetGPUCores())
 		gpuu, _ := GetGPULoad()
-		CreateIfNotExistAndUpdate("gpu_cores", []byte(gpuc), true)
-		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)), true)
+		CreateIfNotExistAndUpdate("gpu_cores", []byte(gpuc), true, ver)
+		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)), true, ver)
 	}
 
-	return dt
+	return dt, ver
 }
 
-func SendUsageViaZK(dt string) {
+func SendUsageViaZK(dt string, ver int32) {
 	cpuu, _ := GetCPULoad()
 	gpuu, _ := GetGPULoad()
 	mem, _ := GetMemory()
 
-	ZKSetAndLog(DevicePropertyPath("cpu"), []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), 0)
+	ZKSetAndLog(DevicePropertyPath("cpu"), []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), ver)
 
 	if dt == "jetson_nano" {
-		ZKSetAndLog(DevicePropertyPath("gpu"), []byte(fmt.Sprintf("%f", gpuu.Used/cpuu.Total)), 0)
+		ZKSetAndLog(DevicePropertyPath("gpu"), []byte(fmt.Sprintf("%f", gpuu.Used/cpuu.Total)), ver)
 	}
 
-	ZKSetAndLog(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), 0)
+	ZKSetAndLog(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), ver)
 
 	heartbeat := fmt.Sprintf("%d", time.Now().Unix())
-	ZKSetAndLog(DevicePropertyPath("heatbeat"), []byte(heartbeat), 0)
+	ZKSetAndLog(DevicePropertyPath("heatbeat"), []byte(heartbeat), ver)
 }
 
 func SendUsageViaAPI() {
@@ -158,10 +173,11 @@ func main() {
 	if role == "edge" {
 		log.Printf("Start heatbeating as an edge device...")
 		RegisterDevice()
-		dt := WriteBasicInfoViaZK()
-		SendUsageViaZK(dt)
+		dt, ver := WriteBasicInfoViaZK()
+		SendUsageViaZK(dt, ver)
 		f = func() {
-			SendUsageViaZK(dt)
+			ver++
+			SendUsageViaZK(dt, ver)
 		}
 	} else if role == "sensor" {
 		log.Printf("Start heatbeating as a sensor...")
