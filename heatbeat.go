@@ -18,11 +18,15 @@ var rootName = flag.String("root_name", "heartbeats", "root node of ZK for devic
 var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
+func RegisterDevice() {
+	CreateIfNotExistAndUpdate("/"+*rootName, []byte("nothing"), false)
+}
+
 func DevicePropertyPath(name string) string {
 	return fmt.Sprintf("/%s/%s/%s", *rootName, *deviceName, name)
 }
 
-func CreateIfNotExistAndUpdate(name string, val []byte) {
+func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool) {
 	dtp := DevicePropertyPath(name)
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
 		log.Printf("Error checking node %s, %v", dtp, err)
@@ -30,7 +34,7 @@ func CreateIfNotExistAndUpdate(name string, val []byte) {
 		if _, err := ZKConn.Create(dtp, val, zk.FlagEphemeral, zk.WorldACL(zk.PermAll)); err != nil {
 			log.Printf("Fail to create node %s, %v", dtp, err)
 		}
-	} else {
+	} else if needUpdate {
 		ZKConn.Set(dtp, val, 0)
 	}
 }
@@ -39,23 +43,23 @@ func WriteBasicInfoViaZK() {
 	dt := GetHardwareType()
 	rol := GetDeviceRole()
 
-	CreateIfNotExistAndUpdate("device_type", []byte(dt))
-	CreateIfNotExistAndUpdate("device_role", []byte(rol))
+	CreateIfNotExistAndUpdate("device_type", []byte(dt), true)
+	CreateIfNotExistAndUpdate("device_role", []byte(rol), true)
 
 	cpuc := fmt.Sprintf("%d", GetCPUCores())
 	mem, _ := GetMemory()
 	cpuu, _ := GetCPULoad()
 
-	CreateIfNotExistAndUpdate("cpu_cores", []byte(cpuc))
-	CreateIfNotExistAndUpdate("cpu", []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)))
-	CreateIfNotExistAndUpdate("mem_cap", []byte(fmt.Sprintf("%d", int(mem.Total))))
-	CreateIfNotExistAndUpdate("mem", []byte(fmt.Sprintf("%f", mem.Used/mem.Total)))
+	CreateIfNotExistAndUpdate("cpu_cores", []byte(cpuc), true)
+	CreateIfNotExistAndUpdate("cpu", []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), true)
+	CreateIfNotExistAndUpdate("mem_cap", []byte(fmt.Sprintf("%d", int(mem.Total))), true)
+	CreateIfNotExistAndUpdate("mem", []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), true)
 
 	if dt == "jetson_nano" {
 		gpuc := fmt.Sprintf("%d", GetGPUCores())
 		gpuu, _ := GetGPULoad()
-		CreateIfNotExistAndUpdate("gpu_cores", []byte(gpuc))
-		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)))
+		CreateIfNotExistAndUpdate("gpu_cores", []byte(gpuc), true)
+		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)), true)
 	}
 }
 
