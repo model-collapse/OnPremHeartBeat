@@ -19,7 +19,8 @@ var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
 func RegisterDevice() {
-	CreateIfNotExistAndUpdate("/"+*rootName, []byte("nothing"), false)
+	CreateIfNotExistAndUpdateAbs("/"+*rootName, []byte("nothing"), false)
+	CreateIfNotExistAndUpdateAbs(fmt.Sprintf("/%s/%s", *rootName, *deviceName), []byte("nothing"), false)
 }
 
 func DevicePropertyPath(name string) string {
@@ -28,6 +29,18 @@ func DevicePropertyPath(name string) string {
 
 func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool) {
 	dtp := DevicePropertyPath(name)
+	if exists, _, err := ZKConn.Exists(dtp); err != nil {
+		log.Printf("Error checking node %s, %v", dtp, err)
+	} else if !exists {
+		if _, err := ZKConn.Create(dtp, val, zk.FlagEphemeral, zk.WorldACL(zk.PermAll)); err != nil {
+			log.Printf("Fail to create node %s, %v", dtp, err)
+		}
+	} else if needUpdate {
+		ZKConn.Set(dtp, val, 0)
+	}
+}
+
+func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool) {
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
 		log.Printf("Error checking node %s, %v", dtp, err)
 	} else if !exists {
