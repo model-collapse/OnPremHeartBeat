@@ -92,6 +92,8 @@ func WriteBasicInfoViaZK() (dt string) {
 		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)), true, ver)
 	}
 
+	heartbeat := fmt.Sprintf("%d", time.Now().Unix())
+	CreateIfNotExistAndUpdate("heartbeat", []byte(heartbeat), true, ver)
 	return dt
 }
 
