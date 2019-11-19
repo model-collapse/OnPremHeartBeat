@@ -52,7 +52,7 @@ func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool) {
 	}
 }
 
-func WriteBasicInfoViaZK() {
+func WriteBasicInfoViaZK() string {
 	dt := GetHardwareType()
 	rol := GetDeviceRole()
 
@@ -74,16 +74,22 @@ func WriteBasicInfoViaZK() {
 		CreateIfNotExistAndUpdate("gpu_cores", []byte(gpuc), true)
 		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)), true)
 	}
+
+	return dt
 }
 
-func SendUsageViaZK() {
+func SendUsageViaZK(dt string) {
 	cpuu, _ := GetCPULoad()
 	gpuu, _ := GetGPULoad()
 	mem, _ := GetMemory()
 
-	ZKConn.Set(DevicePropertyPath("cpu"), []byte(fmt.Sprintf("%f", cpuu)), 0)
-	ZKConn.Set(DevicePropertyPath("gpu"), []byte(fmt.Sprintf("%f", gpuu)), 0)
-	ZKConn.Set(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem)), 0)
+	ZKConn.Set(DevicePropertyPath("cpu"), []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), 0)
+
+	if dt == "jetson_nano" {
+		ZKConn.Set(DevicePropertyPath("gpu"), []byte(fmt.Sprintf("%f", gpuu.Used/cpuu.Total)), 0)
+	}
+
+	ZKConn.Set(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), 0)
 
 	heartbeat := fmt.Sprintf("%d", time.Now().Unix())
 	ZKConn.Set(DevicePropertyPath("heatbeat"), []byte(heartbeat), 0)
@@ -146,10 +152,10 @@ func main() {
 	if role == "edge" {
 		log.Printf("Start heatbeating as an edge device...")
 		RegisterDevice()
-		WriteBasicInfoViaZK()
-		SendUsageViaZK()
+		dt := WriteBasicInfoViaZK()
+		SendUsageViaZK(dt)
 		f = func() {
-			SendUsageViaZK()
+			SendUsageViaZK(dt)
 		}
 	} else if role == "sensor" {
 		log.Printf("Start heatbeating as a sensor...")
