@@ -15,6 +15,7 @@ import (
 var interval = flag.Int("interval", 10, "seconds of interval on sending the heatbeat")
 var deviceName = flag.String("device_name", "", "device name")
 var rootName = flag.String("root_name", "devices", "root node of ZK for device info")
+var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
 func DevicePropertyPath(name string) string {
@@ -110,6 +111,7 @@ func SendUsageViaAPI() {
 
 func main() {
 	flag.Parse()
+	InitializeZK([]string{*zkPath})
 
 	if len(*deviceName) == 0 {
 		dn := GetDeviceName()
