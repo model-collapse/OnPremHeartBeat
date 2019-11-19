@@ -27,6 +27,12 @@ func DevicePropertyPath(name string) string {
 	return fmt.Sprintf("/%s/%s/%s", *rootName, *deviceName, name)
 }
 
+func ZKSetAndLog(path string, val []byte, ver int32) {
+	if _, err := ZKConn.Set(path, val, ver); err != nil {
+		log.Printf("Error in setting %s to %s, %v", path, val, err)
+	}
+}
+
 func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool) {
 	dtp := DevicePropertyPath(name)
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
@@ -36,7 +42,7 @@ func CreateIfNotExistAndUpdate(name string, val []byte, needUpdate bool) {
 			log.Printf("Fail to create node %s, %v", dtp, err)
 		}
 	} else if needUpdate {
-		ZKConn.Set(dtp, val, 0)
+		ZKSetAndLog(dtp, val, 0)
 	}
 }
 
@@ -48,7 +54,7 @@ func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool) {
 			log.Printf("Fail to create node %s, %v", dtp, err)
 		}
 	} else if needUpdate {
-		ZKConn.Set(dtp, val, 0)
+		ZKSetAndLog(dtp, val, 0)
 	}
 }
 
@@ -83,16 +89,16 @@ func SendUsageViaZK(dt string) {
 	gpuu, _ := GetGPULoad()
 	mem, _ := GetMemory()
 
-	ZKConn.Set(DevicePropertyPath("cpu"), []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), 0)
+	ZKSetAndLog(DevicePropertyPath("cpu"), []byte(fmt.Sprintf("%f", cpuu.Used/cpuu.Total)), 0)
 
 	if dt == "jetson_nano" {
-		ZKConn.Set(DevicePropertyPath("gpu"), []byte(fmt.Sprintf("%f", gpuu.Used/cpuu.Total)), 0)
+		ZKSetAndLog(DevicePropertyPath("gpu"), []byte(fmt.Sprintf("%f", gpuu.Used/cpuu.Total)), 0)
 	}
 
-	ZKConn.Set(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), 0)
+	ZKSetAndLog(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), 0)
 
 	heartbeat := fmt.Sprintf("%d", time.Now().Unix())
-	ZKConn.Set(DevicePropertyPath("heatbeat"), []byte(heartbeat), 0)
+	ZKSetAndLog(DevicePropertyPath("heatbeat"), []byte(heartbeat), 0)
 }
 
 func SendUsageViaAPI() {
