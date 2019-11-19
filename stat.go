@@ -85,7 +85,7 @@ func GetCPULoad() (ret Usage, reterr error) {
 	eles := strings.Split(string(cpuLine), " ")
 	var vals []float32
 	for i := 1; i < len(eles); i++ {
-		if len(eles) > 0 {
+		if len(eles[i]) > 0 {
 			v, _ := strconv.ParseFloat(eles[i], 32)
 			vals = append(vals, float32(v))
 		}
