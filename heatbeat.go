@@ -111,7 +111,7 @@ func SendUsageViaZK(dt string) {
 	ZKSetAndLog(DevicePropertyPath("mem"), []byte(fmt.Sprintf("%f", mem.Used/mem.Total)), ver)
 
 	heartbeat := fmt.Sprintf("%d", time.Now().Unix())
-	ZKSetAndLog(DevicePropertyPath("heatbeat"), []byte(heartbeat), ver)
+	ZKSetAndLog(DevicePropertyPath("heartbeat"), []byte(heartbeat), ver)
 }
 
 func SendUsageViaAPI() {
@@ -172,7 +172,6 @@ func main() {
 		log.Printf("Start heatbeating as an edge device...")
 		RegisterDevice()
 		dt := WriteBasicInfoViaZK()
-		SendUsageViaZK(dt)
 		f = func() {
 			SendUsageViaZK(dt)
 		}
