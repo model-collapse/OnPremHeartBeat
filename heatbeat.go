@@ -17,6 +17,10 @@ var deviceName = flag.String("device_name", "", "device name")
 var rootName = flag.String("root_name", "devices", "root node of ZK for device info")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
+func DevicePropertyPath(name string) string {
+	return fmt.Sprintf("%s/%s/%s", *rootName, *deviceName, name)
+}
+
 func CreateIfNotExistAndUpdate(name string, val []byte) {
 	dtp := DevicePropertyPath(name)
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
