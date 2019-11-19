@@ -132,6 +132,7 @@ func main() {
 	log.Printf("role = %s", role)
 	if role == "edge" {
 		log.Printf("Start heatbeating as an edge device...")
+		RegisterDevice()
 		WriteBasicInfoViaZK()
 		SendUsageViaZK()
 		f = func() {
