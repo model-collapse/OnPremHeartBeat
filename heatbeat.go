@@ -137,6 +137,8 @@ func main() {
 		f = func() {
 			SendUsageViaAPI()
 		}
+	} else {
+		log.Fatalf("Invalid role: %s", role)
 	}
 
 	for range ticker.C {

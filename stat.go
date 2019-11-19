@@ -146,7 +146,7 @@ func GetDeviceRole() string {
 		return "unknown"
 	}
 
-	return string(data)
+	return strings.Trim(string(data), " \n")
 }
 
 func GetGateWay() string {
@@ -155,7 +155,7 @@ func GetGateWay() string {
 		return "unknown"
 	}
 
-	return string(data)
+	return strings.Trim(string(data), " \n")
 }
 
 func GetDeviceName() string {
@@ -164,5 +164,5 @@ func GetDeviceName() string {
 		return "unknown"
 	}
 
-	return string(data)
+	return strings.Trim(string(data), " \n")
 }
