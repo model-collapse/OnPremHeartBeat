@@ -14,7 +14,7 @@ import (
 
 var interval = flag.Int("interval", 10, "seconds of interval on sending the heatbeat")
 var deviceName = flag.String("device_name", "", "device name")
-var rootName = flag.String("root_name", "devices", "root node of ZK for device info")
+var rootName = flag.String("root_name", "heartbeats", "root node of ZK for device info")
 var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
@@ -27,7 +27,9 @@ func CreateIfNotExistAndUpdate(name string, val []byte) {
 	if exists, _, err := ZKConn.Exists(dtp); err != nil {
 		log.Printf("Error checking node %s, %v", dtp, err)
 	} else if !exists {
-		ZKConn.Create(dtp, val, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
+		if _, err := ZKConn.Create(dtp, val, zk.FlagEphemeral, zk.WorldACL(zk.PermAll)); err != nil {
+			log.Printf("Fail to create node %s, %v", dtp, err)
+		}
 	} else {
 		ZKConn.Set(dtp, val, 0)
 	}
