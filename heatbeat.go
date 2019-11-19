@@ -18,6 +18,8 @@ var rootName = flag.String("root_name", "heartbeats", "root node of ZK for devic
 var zkPath = flag.String("zk_addr", "n1.onprem.ai:2181", "path to zk")
 var urlTmpl = `http://%s:18969/heartbeat?device=%s`
 
+const ver = -1
+
 func RegisterDevice() {
 	CreateIfNotExistAndUpdateAbs("/"+*rootName, []byte("nothing"), false, 0)
 	CreateIfNotExistAndUpdateAbs(fmt.Sprintf("/%s/%s", *rootName, *deviceName), []byte("nothing"), false, 0)
@@ -67,16 +69,9 @@ func CreateIfNotExistAndUpdateAbs(dtp string, val []byte, needUpdate bool, ver i
 	}
 }
 
-func WriteBasicInfoViaZK() (dt string, ver int32) {
+func WriteBasicInfoViaZK() (dt string) {
 	dt = GetHardwareType()
 	rol := GetDeviceRole()
-
-	ver, err := GetVersion()
-	if err != nil {
-		log.Printf("Error in getting version, %s", err)
-	}
-	log.Printf("Setting version from %d to %d", ver)
-	ver++
 
 	CreateIfNotExistAndUpdate("device_type", []byte(dt), true, ver)
 	CreateIfNotExistAndUpdate("device_role", []byte(rol), true, ver)
@@ -97,10 +92,10 @@ func WriteBasicInfoViaZK() (dt string, ver int32) {
 		CreateIfNotExistAndUpdate("gpu", []byte(fmt.Sprintf("%f", gpuu.Used/gpuu.Total)), true, ver)
 	}
 
-	return dt, ver
+	return dt
 }
 
-func SendUsageViaZK(dt string, ver int32) {
+func SendUsageViaZK(dt string) {
 	cpuu, _ := GetCPULoad()
 	gpuu, _ := GetGPULoad()
 	mem, _ := GetMemory()
@@ -174,11 +169,10 @@ func main() {
 	if role == "edge" {
 		log.Printf("Start heatbeating as an edge device...")
 		RegisterDevice()
-		dt, ver := WriteBasicInfoViaZK()
-		SendUsageViaZK(dt, ver)
+		dt := WriteBasicInfoViaZK()
+		SendUsageViaZK(dt)
 		f = func() {
-			ver++
-			SendUsageViaZK(dt, ver)
+			SendUsageViaZK(dt)
 		}
 	} else if role == "sensor" {
 		log.Printf("Start heatbeating as a sensor...")
