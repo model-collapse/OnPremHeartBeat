@@ -18,7 +18,9 @@ func InitializeZK(servers []string) {
 
 	go func() {
 		for evt := range evt {
-			log.Printf("[ERR ZK] %v", evt.Err)
+			if evt.Err != nil {
+				log.Printf("[ERR ZK] %v", evt.Err)
+			}
 		}
 	}()
 
