@@ -6,10 +6,6 @@ ENV GOPATH /tmp/grepo
 ENV GOPROXY goproxy.cn
 WORKDIR /tmp/workspace
 
-RUN apt-get update
-RUN apt-get install -y git
-RUN apt-get install -y gcc libc6 libc6-dev
-
 RUN mkdir OnPremHeartBeat
 RUN cd OnPremHeartBeat & git clone https://github.com/model-collapse/OnPremHeartBeat.git && cd OnPremHeartBeat && go build -o OnPremHeartBeat
 RUN cp /tmp/workspace/OnPremHeartBeat/OnPremHeartBeat/OnPremHeartBeat . && chmod +x OnPremHeartBeat
