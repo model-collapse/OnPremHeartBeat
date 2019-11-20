@@ -1,4 +1,4 @@
-FROM modelcollapse/raspbian-go
+FROM modelcollapse/raspbian-go:strech
 
 RUN mkdir -p /tmp/workspace
 RUN mkdir -p /tmp/grepo
