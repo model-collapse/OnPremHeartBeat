@@ -79,7 +79,7 @@ func main() {
 	InitializeZK([]string{*zkPath})
 
 	router := rt.New()
-	handler := func(ctx rt.Context) {
+	handler := func(ctx *rt.Context) (reterr error) {
 		deviceName := string(ctx.URI().QueryArgs().Peek("device_name"))
 		var req HeartBeatRequest
 		json.Unmarshal(ctx.PostBody(), &req)
@@ -98,14 +98,16 @@ func main() {
 			CreateIfNotExistAndUpdate(deviceName, "cpu", []byte(fmt.Sprintf("%f", req.CPU)), true, -1)
 			CreateIfNotExistAndUpdate(deviceName, "mem", []byte(fmt.Sprintf("%f", req.Mem)), true, -1)
 
-			CreateIfNotExistAndUpdate(deviceName, "heartbeat", fmt.Sprintf("%d", req.LastHeartBeat)), true, -1)
+			CreateIfNotExistAndUpdate(deviceName, "heartbeat", []byte(fmt.Sprintf("%d", req.LastHeartBeat)), true, -1)
 		} else {
 			ZKSetAndLog(DevicePropertyPath(deviceName, "cpu"), []byte(fmt.Sprintf("%f", req.CPU)), -1)
 			ZKSetAndLog(DevicePropertyPath(deviceName, "mem"), []byte(fmt.Sprintf("%f", req.Mem)), -1)
 			ZKSetAndLog(DevicePropertyPath(deviceName, "heartbeat"), []byte(fmt.Sprintf("%d", req.LastHeartBeat)), -1)
 		}
+
+		return
 	}
 	router.Post("/heartbeat", handler)
 
-	fh.ListenAndServe(router.HandleRequest)
+	fh.ListenAndServe(":11988", router.HandleRequest)
 }
