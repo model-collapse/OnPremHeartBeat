@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime"
 	"strconv"
@@ -117,7 +118,10 @@ func GetGPUCores() int32 {
 func GetHardwareType() string {
 	data, err := ioutil.ReadFile("/proc/device-tree/model")
 	if err != nil {
-		return "unknown"
+		if data, err = ioutil.ReadFile("/var/device-tree/model"); err != nil {
+			log.Printf("file does not exist, %s", "/var/device-tree/model")
+			return "unknown"
+		}
 	}
 
 	version := string(data)
@@ -137,6 +141,7 @@ func GetHardwareType() string {
 		return "pi0"
 	}
 
+	log.Printf("Device info = %s, unknown", version)
 	return "unknown"
 }
 
