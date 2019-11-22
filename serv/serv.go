@@ -82,7 +82,9 @@ func main() {
 	handler := func(ctx *rt.Context) (reterr error) {
 		deviceName := string(ctx.URI().QueryArgs().Peek("device_name"))
 		var req HeartBeatRequest
-		json.Unmarshal(ctx.PostBody(), &req)
+		body := ctx.PostBody()
+		log.Printf("post body = %s", body)
+		json.Unmarshal(body, &req)
 
 		//register
 		registered := RegisterDevice(deviceName)
