@@ -26,7 +26,7 @@ type HeartBeatRequest struct {
 	MemoryCap int `json:"mem_cap"`
 
 	// heart beat
-	LastHeartBeat int64 `json:"heatbeat"`
+	LastHeartBeat int64 `json:"heartbeat"`
 }
 
 func RegisterDevice(deviceName string) bool {
